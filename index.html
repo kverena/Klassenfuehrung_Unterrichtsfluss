@@ -1,0 +1,600 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Unterrichtsfluss analysieren</title>
+<style>
+
+:root{
+  --green:#00883A; --green-dark:#006b2e; --green-soft:#e6f2ea; --ink:#1f2421; --muted:#5b625e;
+  --line:#d7ddd9; --bg:#f6f7f6; --card:#ffffff; --warn:#a15c00; --warn-soft:#fff4e2; --blue:#2a5d9f; --blue-soft:#e8eef8;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{font-family:"Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;color:var(--ink);background:var(--bg);line-height:1.55;font-size:16px}
+header.top{background:var(--green);color:#fff;padding:18px 16px}
+header.top .inner{max-width:1100px;margin:0 auto;display:flex;flex-wrap:wrap;gap:12px 24px;align-items:flex-end;justify-content:space-between}
+header.top h1{margin:0;font-size:1.45rem;line-height:1.25}
+header.top p{margin:4px 0 0;opacity:.9;font-size:.92rem}
+.namebox{display:flex;flex-direction:column;gap:4px;font-size:.85rem;min-width:220px}
+.namebox input{padding:8px 10px;border-radius:6px;border:0;font:inherit;font-size:.95rem}
+.layout{max-width:1100px;margin:0 auto;padding:16px;display:grid;grid-template-columns:230px 1fr;gap:20px}
+nav.side{position:sticky;top:12px;align-self:start;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px}
+nav.side button{display:flex;width:100%;text-align:left;gap:8px;align-items:center;background:none;border:0;padding:9px 10px;border-radius:7px;font:inherit;font-size:.93rem;color:var(--ink);cursor:pointer}
+nav.side button:hover{background:var(--bg)}
+nav.side button.active{background:var(--green-soft);color:var(--green-dark);font-weight:600}
+nav.side .dot{width:9px;height:9px;border-radius:50%;border:1.5px solid var(--line);flex:none}
+nav.side .dot.started{background:#f1c27d;border-color:#d99b3d}
+nav.side .dot.done{background:var(--green);border-color:var(--green)}
+nav.side hr{border:0;border-top:1px solid var(--line);margin:6px 4px}
+main{min-width:0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:20px 22px;margin-bottom:16px}
+h2{margin:0 0 8px;font-size:1.3rem;color:var(--green-dark)}
+h3{margin:18px 0 6px;font-size:1.05rem}
+.kicker{font-size:.8rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:2px}
+.situation p{margin:0 0 10px}
+.hint{color:var(--muted);font-size:.9rem;margin:2px 0 8px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
+.chip{display:inline-block;padding:3px 10px;border-radius:999px;font-size:.85rem;border:1px solid var(--line);background:#fff}
+.chip.ok{background:var(--green-soft);border-color:#9fd0b2;color:var(--green-dark)}
+.chip.miss{background:var(--blue-soft);border-color:#b8c9e6;color:var(--blue)}
+.chip.extra{background:var(--warn-soft);border-color:#f0cf9a;color:var(--warn)}
+label.field{display:block;font-weight:600;margin:16px 0 4px}
+label.field span{display:block;font-weight:400;color:var(--muted);font-size:.88rem}
+textarea{width:100%;min-height:110px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font:inherit;font-size:.95rem;resize:vertical;background:#fff}
+textarea:focus,input:focus{outline:2px solid var(--green);outline-offset:1px}
+.impuls{background:var(--green-soft);border-left:4px solid var(--green);padding:10px 14px;border-radius:0 8px 8px 0;font-style:italic;margin:6px 0}
+.btnrow{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
+button.btn{font:inherit;font-size:.95rem;padding:9px 16px;border-radius:7px;border:1px solid var(--green);background:var(--green);color:#fff;cursor:pointer}
+button.btn:hover{background:var(--green-dark)}
+button.btn.ghost{background:#fff;color:var(--green-dark)}
+button.btn.ghost:hover{background:var(--green-soft)}
+button.btn.danger{background:#fff;color:#a32d2d;border-color:#d9a3a3}
+.reveal{border-top:1px dashed var(--line);margin-top:20px;padding-top:6px}
+.reveal p{margin:0 0 10px}
+.legend{font-size:.85rem;color:var(--muted)}
+.status{font-size:.82rem;color:var(--muted);margin-top:10px}
+table.over{width:100%;border-collapse:collapse;font-size:.92rem}
+table.over th,table.over td{border-bottom:1px solid var(--line);padding:8px 6px;text-align:left;vertical-align:top}
+table.over th{background:var(--green-soft)}
+html{-webkit-text-size-adjust:100%}
+button,.sec,input,textarea{-webkit-tap-highlight-color:rgba(0,136,58,.15)}
+button.btn,nav.side button{min-height:44px}
+textarea{overflow:hidden;min-height:110px;font-size:16px;font-weight:400}
+#printArea{display:none}
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:9px 16px;border-radius:8px;font-size:.9rem;opacity:0;transition:opacity .2s;pointer-events:none}
+.toast.show{opacity:1}
+@media (max-width:820px){
+  .layout{grid-template-columns:1fr;padding:12px}
+  nav.side{position:static;display:flex;overflow-x:auto;gap:4px;padding:6px}
+  nav.side button{width:auto;white-space:nowrap;flex:none}
+  nav.side hr{display:none}
+  .card{padding:16px}
+}
+@media (min-width:821px) and (max-width:1100px){
+  .layout{grid-template-columns:200px 1fr;gap:14px}
+}
+@media print{
+  body{background:#fff}
+  header.top,.layout,.toast{display:none!important}
+  #printArea{display:block!important;font-size:11pt;color:#000}
+  #printArea h1{color:#00883A;font-size:18pt;margin:0 0 4pt}
+  #printArea h2{color:#00883A;font-size:14pt;margin:16pt 0 4pt;break-after:avoid}
+  #printArea h3{font-size:11.5pt;margin:10pt 0 2pt;break-after:avoid}
+  #printArea .txt{white-space:pre-wrap;overflow-wrap:anywhere;margin:0 0 6pt}
+  #printArea .sit{color:#444}
+  #printArea section{break-before:page}
+  #printArea section:first-of-type{break-before:auto}
+  @page{size:A4;margin:18mm}
+}
+
+.dimgroup{margin:10px 0 4px}
+.dimgroup .gl{font-size:.8rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:4px}
+.dimbtns{display:flex;flex-wrap:wrap;gap:8px}
+button.dim{font:inherit;font-size:.93rem;min-height:44px;padding:8px 14px;border-radius:999px;border:1.5px solid var(--line);background:#fff;color:var(--ink);cursor:pointer;text-align:left}
+button.dim:hover{border-color:var(--green)}
+button.dim[aria-pressed="true"]{background:var(--green);border-color:var(--green);color:#fff}
+button.dim.cmp-ok{background:var(--green);border-color:var(--green);color:#fff}
+button.dim.cmp-alt{background:var(--green-soft);border-color:#9fd0b2;color:var(--green-dark)}
+button.dim.cmp-miss{background:var(--blue-soft);border-color:#b8c9e6;color:var(--blue)}
+button.dim.cmp-extra{background:var(--warn-soft);border-color:#f0cf9a;color:var(--warn)}
+.chip.alt{background:#f3faf5;border-color:#bfe0cb;color:var(--green-dark)}
+.tag{display:inline-block;font-size:.78rem;padding:2px 9px;border-radius:999px;background:var(--bg);border:1px solid var(--line);color:var(--muted);margin-left:6px;vertical-align:middle}
+.defgrid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.defbox{background:var(--bg);border-radius:8px;padding:12px 16px}
+.defbox h3{margin:0 0 6px;color:var(--green-dark)}
+.defbox dl{margin:0}
+.defbox dt{font-weight:600;margin-top:8px}
+.defbox dd{margin:0;font-size:.93rem}
+.handl{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.handl div{background:var(--bg);border-radius:8px;padding:10px 12px;font-size:.9rem}
+.handl strong{display:block;color:var(--green-dark)}
+.handl .wide{grid-column:1/-1;background:var(--green-soft)}
+@media (max-width:820px){ .defgrid{grid-template-columns:1fr} .handl{grid-template-columns:1fr} }
+</style>
+</head>
+<body>
+<header class="top"><div class="inner">
+  <div>
+    <h1>Unterrichtsfluss analysieren</h1>
+    <p>Seminar Klassenführung · Fallarbeit zu Reibungslosigkeit und Schwung nach Kounin</p>
+  </div>
+  <label class="namebox">Ihr Name (erscheint im Download)
+    <input id="name" type="text" autocomplete="name" placeholder="Vorname Nachname">
+  </label>
+</div></header>
+
+<div class="layout">
+  <nav class="side" id="nav" aria-label="Bereiche"></nav>
+  <main id="main"></main>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div id="printArea"></div>
+
+<script>
+const DATA = {"intro": ["Unterrichtsfluss wird vor allem dann sichtbar, wenn er unterbrochen wird. Kounin (1976) hat deshalb genau beobachtet, durch welches Verhalten Lehrkräfte Reibungslosigkeit und Schwung im Unterricht selbst stören. Die acht Fälle beruhen auf seinen Beispielen in der Darstellung von Haag (2018). Einige sind nah am Original, andere sind in Situationen mit digitalen Medien übertragen. Ein Fall zeigt ein gelungenes Beispiel."], "cases": [{"nr": 1, "title": "Das Update", "tag": "digital adaptiert", "situation": ["Frau Kraus erklärt ihrer 6. Klasse die Aufgaben, die gleich im digitalen Arbeitsheft auf den Tablets bearbeitet werden sollen. Mitten in der Erklärung erscheint auf dem interaktiven Display ein Fenster mit dem Hinweis auf ein Systemupdate.", "Frau Kraus hält inne, seufzt „Typisch, immer mitten in der Stunde“ und klickt sich durch die Einstellungen, um das Update zu verschieben. Dabei erzählt sie, dass das Display letzte Woche in einer anderen Klasse ganz ausgefallen sei. Einige Kinder berichten daraufhin von eigenen Erlebnissen mit Updates zuhause."], "dims": ["RA"], "alsoOk": ["UP"], "analysis": ["Der Fall zeigt Reizabhängigkeit. Der Auslöser kommt von außen, nämlich das Fenster auf dem Display. Frau Kraus greift ihn auf, kommentiert ihn und erzählt eine Geschichte dazu. Damit verschiebt sich die Aufmerksamkeit der Klasse von der Aufgabenerklärung auf das Nebenthema, und die Kinder steigen bereitwillig ein.", "Wer die Dauer der Abschweifung betont, kann zusätzlich von Überproblematisierung sprechen. Im Kern liegt aber eine Reaktion auf einen äußeren Reiz vor.", "Eine Alternative wäre, das Fenster wortlos zu schließen und die Erklärung fortzusetzen. Vorbeugend hilft eine Medienvorbereitung vor der Stunde, also Geräte prüfen und Updates außerhalb der Unterrichtszeit erledigen.", "Vorlage ist Kounins Beispiel des Papierschnipsels auf dem Boden, der während einer Aufgabenerklärung mehrere Bemerkungen und eine Inspektion des Fußbodens auslöst (Kounin, 1976, S. 107)."]}, {"nr": 2, "title": "Der leere Akku", "tag": "digital adaptiert", "situation": ["Die 7c arbeitet still an einer Übung auf den Tablets. Ein Schüler meldet sich und sagt leise, dass sein Akku leer ist. Herr Kaya geht zu ihm und fragt so laut, dass alle es hören: „Wann hast du es denn zuletzt geladen? Wo ist dein Ladekabel? Liegt das wieder zuhause? Und was machst du abends eigentlich mit dem Tablet, zockst du darauf?“", "Nach fast zwei Minuten holt er ein Ersatzgerät aus dem Schrank. Mehrere Mitschülerinnen und Mitschüler haben inzwischen ihre Arbeit unterbrochen und hören zu."], "dims": ["UP"], "alsoOk": [], "analysis": ["Der Fall zeigt Überproblematisierung und betrifft damit den Schwung. Herr Kaya beschäftigt sich weit länger als nötig mit einem Arbeitsmittel und dem Verhalten eines einzelnen Schülers. Das eigentliche Problem wäre mit einem Ersatzgerät in wenigen Sekunden gelöst.", "Weil er laut spricht, verliert nicht nur der Schüler, sondern die ganze Klasse Lernzeit. Die Ermahnung wirkt zudem bloßstellend.", "Eine Alternative wäre, das Ersatzgerät wortlos auszugeben und die Frage nach dem Laden später unter vier Augen zu klären. Vorbeugend hilft eine Routine für leere Akkus, etwa eine Ladestation oder feste Leihgeräte.", "Vorlage ist Kounins Beispiel des verlorenen Bleistifts, zu dem die Lehrkraft während der Stillarbeit eine lange Reihe von Fragen stellt (Kounin, 1976, S. 111)."]}, {"nr": 3, "title": "Auf dem Weg zur Tafel", "tag": "nach Kounin", "situation": ["Frau Berger möchte die Lösungen der Hausaufgabe an der Tafel erklären und geht dazu nach vorn. Auf halbem Weg bleibt sie stehen, dreht sich um und geht zum Pult. Dort blättert sie in ihren Aufzeichnungen und trägt in Ruhe noch etwas in ihren Kalender ein.", "Die Klasse wartet, einige beginnen sich zu unterhalten. Nach einigen Minuten legt Frau Berger die Unterlagen beiseite, geht zur Tafel und beginnt mit der Erklärung der Hausaufgabe."], "dims": ["TI"], "alsoOk": ["UV"], "analysis": ["Der Fall zeigt thematische Inkonsequenz. Frau Berger beginnt eine Tätigkeit, lässt sie unkommentiert stehen, wendet sich etwas anderem zu und kehrt danach zur ursprünglichen Tätigkeit zurück. Typisch ist die Wartezeit, in der die Klasse ohne Auftrag bleibt.", "Weil der Anstoß von der Lehrkraft selbst kommt, ist auch der Bezug zur Unvermitteltheit nachvollziehbar. Entscheidend ist hier aber das Muster aus Abbrechen und späterem Zurückkehren.", "Eine Alternative wäre, die Erklärung zuerst abzuschließen und Verwaltungsaufgaben in eine Stillarbeitsphase oder die Pause zu legen. Hilfreich ist auch, sich vor der Stunde einen Merkzettel für solche Einfälle bereitzulegen.", "Vorlage ist Kounins Beispiel der Lehrkraft, die auf dem Weg zur Tafel umkehrt und am Pult ihre Aufzeichnungen durchsieht (Kounin, 1976, S. 109)."]}, {"nr": 4, "title": "Die Frage nach der KI", "tag": "digital adaptiert", "situation": ["Frau Meier übt mit ihrer 9. Klasse, wie man eigene Texte formal und sprachlich überarbeitet. Eine Schülerin fragt, ob man Texte heute nicht einfach von einer KI korrigieren lassen könne. Mehrere Jugendliche nicken, die Frage interessiert offensichtlich viele, und Frau Meier hätte selbst Lust, darauf einzugehen.", "Sie antwortet: „Das ist eine gute Frage, und die schauen wir uns am Donnerstag genauer an.“ Dann notiert sie die Frage im digitalen Themenspeicher am Board und lässt die Klasse mit der Überarbeitung ihrer Texte weitermachen."], "dims": ["GL"], "alsoOk": [], "analysis": ["Der Fall ist ein gelungenes Beispiel für Reibungslosigkeit und Schwung. Frau Meier nimmt einen attraktiven Ablenkungsreiz wahr, lässt sich aber nicht vom Ziel der Stunde abbringen. Damit vermeidet sie sowohl Reizabhängigkeit als auch eine thematische Inkonsequenz durch einen langen Exkurs.", "Zugleich würdigt sie die Frage und macht durch den Themenspeicher transparent, dass sie nicht verloren geht. Das schafft Orientierungssicherheit und hält die Beziehung zur Klasse positiv.", "Vorlage ist Kounins Beispiel der Lehrkraft, die bemerkt, dass ihre Zusatzerklärungen zu weit vom Thema abführen, und beschließt, sie später einzubringen (Kounin, 1976, dargestellt bei Haag, 2018)."]}, {"nr": 5, "title": "Die digitale Pinnwand", "tag": "digital adaptiert", "situation": ["In einer 5. Klasse haben die Kinder im Englischunterricht auf einer digitalen Pinnwand kurze Beiträge zu ihren Einkaufserlebnissen gepostet. Herr Schulz ruft die Pinnwand am Board auf, und eine Schülerin liest ihren Beitrag vor.", "Direkt danach wechselt Herr Schulz zur nächsten Folie und stellt die neuen Vokabeln für die kommende Lektion vor. Mehrere Kinder, die sich gemeldet haben, nehmen die Hand wieder herunter. Die Pinnwand wird weder in dieser noch in der nächsten Stunde wieder aufgerufen."], "dims": ["VK"], "alsoOk": [], "analysis": ["Der Fall zeigt eine Verkürzung. Eine begonnene Tätigkeit wird unkommentiert stehengelassen, es wird zu neuem Stoff gewechselt, und die ursprüngliche Tätigkeit wird nicht weiterbehandelt. Anders als bei der thematischen Inkonsequenz fehlt die Rückkehr.", "Für die Lernenden ist das doppelt ungünstig. Ihre Beiträge bleiben ohne Würdigung, und der Sinn der Aufgabe wird nachträglich in Frage gestellt.", "Eine Alternative wäre, für die Besprechung Zeit einzuplanen, zum Beispiel mit einer Auswahl von drei Beiträgen. Reicht die Zeit nicht, sollte die Lehrkraft das ausdrücklich ankündigen und die Pinnwand als Einstieg der nächsten Stunde nutzen.", "Vorlage ist Kounins Beispiel der Kinder, die von Einkaufserlebnissen berichten sollen, während sich die Lehrkraft nach dem ersten Beitrag der Tafel und neuen Wörtern zuwendet (Kounin, 1976, S. 107)."]}, {"nr": 6, "title": "Die Abgabe", "tag": "digital adaptiert", "situation": ["Die 8b arbeitet seit zehn Minuten konzentriert an einer Textanalyse. Herr Yilmaz sitzt am Pult und pflegt nebenbei den Kurs auf der Lernplattform. Dabei fällt ihm ein, dass er die Abgabe für das Projekt noch nicht angekündigt hat.", "Er steht auf und ruft in den Raum: „Alle mal kurz herhören! Ich habe gerade die Abgabe fürs Projekt freigeschaltet. Frist ist Freitag, und bitte als PDF hochladen, nicht als Foto!“ Sofort fragen mehrere, ob auch Word-Dateien gehen und ob Gruppen eine gemeinsame Abgabe machen dürfen."], "dims": ["UV"], "alsoOk": [], "analysis": ["Der Fall zeigt Unvermitteltheit. Der Anstoß geht von der Lehrkraft selbst aus. Herr Yilmaz platzt mit einem eigenen Anliegen in eine laufende Arbeitsphase, ohne darauf zu achten, ob die Klasse dafür bereit ist. Die Nachfragen verlängern die Unterbrechung zusätzlich.", "Eine Alternative wäre, die Information zu notieren und am Ende der Arbeitsphase oder der Stunde zu geben. Ebenso möglich ist eine schriftliche Ankündigung auf der Lernplattform mit allen Details, auf die er kurz verweist.", "Vorlage ist Kounins Unterscheidung, nach der bei der Unvermitteltheit der Reiz nicht von außen, sondern von der Lehrkraft selbst ausgeht (Kounin, 1976, dargestellt bei Haag, 2018)."]}, {"nr": 7, "title": "Hefte weg, Hefte her", "tag": "nach Kounin", "situation": ["Frau Novak bittet ihre 4. Klasse, die Rechtschreibhefte wegzupacken und die Mathebücher herauszulegen. Es dauert eine Weile, bis alle Hefte verstaut und die Bücher auf der richtigen Seite aufgeschlagen sind.", "Als endlich alle bereit sind, sagt Frau Novak: „Ach, wartet, holt die Rechtschreibhefte nochmal raus. Schreibt unter die Übung noch die drei Wörter, die euch am schwersten gefallen sind.“"], "dims": ["TU"], "alsoOk": [], "analysis": ["Der Fall zeigt thematische Unentschlossenheit. Frau Novak beendet eine Tätigkeit, leitet eine neue ein und kommt dann auf die ursprüngliche Tätigkeit zurück. Der Wechsel kostet doppelt Zeit, weil alle Materialien zweimal bewegt werden.", "Im Unterschied zur thematischen Inkonsequenz ist die erste Tätigkeit hier bereits abgeschlossen. Die Lehrkraft springt also zu etwas zurück, das schon beendet war.", "Eine Alternative wäre, den Reflexionsauftrag ans Ende der Rechtschreibphase zu legen und erst danach zu wechseln. Ein kurzer Blick auf die eigene Stundenplanung vor jedem Übergang hilft dabei, ebenso eine feste Abschlussfrage am Ende jeder Phase.", "Vorlage ist Kounins Beispiel der Lehrkraft, die nach dem Wechsel von Rechtschreib- zu Rechensachen noch einmal auf die Rechtschreibübung zurückkommt (Kounin, 1976, S. 109)."]}, {"nr": 8, "title": "Die Zugangscodes", "tag": "digital adaptiert", "situation": ["Für eine Onlinerecherche braucht jede Schülerin und jeder Schüler der 10a einen persönlichen Zugangscode. Herr Brandt ruft die Jugendlichen einzeln ans Pult: „Ahmet, du zuerst. Gut, jetzt Lea. Dann Jonas …“ Er reicht jeweils einen Zettel mit dem Code und wartet, bis die Anmeldung am Gerät geklappt hat.", "Die übrigen sitzen ohne Auftrag auf ihren Plätzen und warten. Nach gut fünfzehn Minuten sind alle angemeldet, und die Recherche beginnt."], "dims": ["FR"], "alsoOk": [], "analysis": ["Der Fall zeigt Fragmentierung und betrifft damit den Schwung. Herr Brandt lässt eine Handlung, die die Gruppe gemeinsam erledigen könnte, in Einzelaktionen zerfallen. Jede Person kommt nacheinander an die Reihe, und die übrigen haben in dieser Zeit nichts zu tun.", "Eine Alternative wäre, die Codes vorab auszuteilen, etwa als Liste oder auf Kärtchen am Platz, damit sich alle gleichzeitig anmelden. Wer früher fertig ist, bekommt einen Anschlussauftrag. Probleme bei einzelnen Anmeldungen löst die Lehrkraft danach gezielt.", "Vorlage ist Kounins Beispiel der Lehrkraft, die eine Gruppe von zehn Kindern einzeln nacheinander ihren Platz wechseln lässt (Kounin, 1976, S. 113 ff.)."]}]};
+
+const DIMS = {
+  RA:{name:"Reizabhängigkeit", group:"R", desc:"Die Lehrkraft reagiert auf einen äußeren Reiz und lässt sich davon von der laufenden Tätigkeit ablenken."},
+  UV:{name:"Unvermitteltheit", group:"R", desc:"Der Reiz geht von der Lehrkraft selbst aus. Sie platzt mit einem eigenen Anliegen in eine laufende Tätigkeit, ohne auf die Bereitschaft der Klasse zu achten."},
+  TI:{name:"Thematische Inkonsequenz", group:"R", desc:"Behandelter Stoff wird unkommentiert stehengelassen, es wird zu Neuem gewechselt und danach der ursprüngliche Stoff weiterbehandelt."},
+  VK:{name:"Verkürzung", group:"R", desc:"Behandelter Stoff wird unkommentiert stehengelassen, es wird zu Neuem gewechselt, und der ursprüngliche Stoff wird nicht weiterbehandelt."},
+  TU:{name:"Thematische Unentschlossenheit", group:"R", desc:"Die Lehrkraft beendet eine Tätigkeit, beginnt eine neue und kommt dann auf die ursprüngliche Tätigkeit zurück."},
+  UP:{name:"Überproblematisierung", group:"S", desc:"Die Lehrkraft verlangsamt den Arbeitsprozess, weil sie sich länger als nötig mit Benehmen, Verhaltensdetails, Arbeitsmitteln oder Lehrstoff aufhält."},
+  FR:{name:"Fragmentierung", group:"S", desc:"Die Lehrkraft lässt eine Einheit zerfallen, indem sie Gruppenmitglieder einzeln nacheinander handeln lässt oder Handlungen in unnötige Einzelschritte zerlegt."},
+  GL:{name:"Gelungenes Beispiel", group:"G", desc:"Die Lehrkraft nimmt einen möglichen Störreiz wahr, lässt sich aber nicht vom Ziel abbringen und hält den Fluss aufrecht."}
+};
+const ORDER = ["RA","UV","TI","VK","TU","UP","FR","GL"];
+const GROUPS = [["R","Reibungslosigkeit (Gegenteil Sprunghaftigkeit)"],["S","Schwung (Gegenteil Verzögerungen)"],["G","Kein Bruch im Fluss"]];
+
+const FIELDS = [
+  {key:"obs", label:"Beobachtbares Verhalten", help:"Was tut oder sagt die Lehrkraft genau, und was geschieht dadurch mit dem Unterrichtsfluss?"},
+  {key:"assign", label:"Zuordnung und Begründung", help:"Welcher Dimension ordnen Sie das Verhalten zu? Begründen Sie mit den Merkmalen der Dimension."},
+  {key:"alt", label:"Alternative Handlung", help:"Wie könnte die Lehrkraft handeln, damit der Fluss erhalten bleibt? Beziehen Sie strukturierende Handlungen ein.",
+   helpGood:"Welche strukturierende Handlung zeigt die Lehrkraft, und was wäre ohne sie vermutlich passiert?"}
+];
+
+/* ---------- state ---------- */
+const STORE_KEY = "unterrichtsfluss-uebung-v1";
+function emptyEntry(){ return {dims:[], obs:"", assign:"", alt:"", revealed:false}; }
+function freshState(){
+  const s = {name:"", cases:{}, own:Object.assign(emptyEntry(), {title:"", situation:""}), view:"basics"};
+  DATA.cases.forEach(c => s.cases[c.nr] = emptyEntry());
+  return s;
+}
+let state = freshState();
+try{ const raw = localStorage.getItem(STORE_KEY); if(raw){ mergeState(JSON.parse(raw)); } }catch(e){}
+function mergeState(obj){
+  if(!obj || typeof obj!=="object") return;
+  const base = freshState();
+  base.name = typeof obj.name==="string" ? obj.name : "";
+  if(obj.cases) for(const k in base.cases){ if(obj.cases[k]) base.cases[k] = Object.assign(emptyEntry(), obj.cases[k]); }
+  if(obj.own) base.own = Object.assign(base.own, obj.own);
+  if(obj.view) base.view = obj.view;
+  state = base;
+}
+let saveTimer=null;
+function save(){
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(()=>{
+    try{ localStorage.setItem(STORE_KEY, JSON.stringify(state)); setStatus("Automatisch in diesem Browser gespeichert"); }
+    catch(e){ setStatus("Automatisches Speichern ist in diesem Browser nicht möglich. Bitte zwischendurch eine Sicherung herunterladen."); }
+  }, 300);
+}
+function autoGrow(t){ t.style.height="auto"; t.style.height=(t.scrollHeight+2)+"px"; }
+function growAll(){ requestAnimationFrame(()=>document.querySelectorAll("main textarea").forEach(autoGrow)); }
+document.addEventListener("input", ev=>{ if(ev.target.tagName==="TEXTAREA") autoGrow(ev.target); });
+window.addEventListener("resize", growAll);
+function setStatus(t){ const el=document.getElementById("status"); if(el) el.textContent=t; }
+function toast(t){ const el=document.getElementById("toast"); el.textContent=t; el.classList.add("show"); setTimeout(()=>el.classList.remove("show"),2200); }
+
+/* ---------- helpers ---------- */
+const $ = (sel,root=document)=>root.querySelector(sel);
+function esc(s){ return String(s).replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function progress(e){
+  const filled = FIELDS.filter(f=>e[f.key].trim()).length + (e.dims.length?1:0);
+  if(filled===0) return "";
+  return filled>=4 ? "done" : "started";
+}
+const dimLine = arr => arr.length ? arr.map(x=>DIMS[x].name).join(", ") : "keine Auswahl";
+
+/* ---------- navigation ---------- */
+function renderNav(){
+  const nav = $("#nav");
+  let h = [["basics","Grundlagen"],["intro","Arbeitsauftrag"]].map(([v,t])=>`<button data-view="${v}" class="${state.view===v?'active':''}">${t}</button>`).join("");
+  h += "<hr>";
+  DATA.cases.forEach(c=>{
+    h += `<button data-view="${c.nr}" class="${String(state.view)===String(c.nr)?'active':''}"><span class="dot ${progress(state.cases[c.nr])}"></span>Fall ${c.nr} · ${esc(c.title)}</button>`;
+  });
+  h += `<button data-view="own" class="${state.view==='own'?'active':''}"><span class="dot ${progress(state.own)}"></span>Eigener digitaler Fall</button>`;
+  h += "<hr>";
+  h += `<button data-view="export" class="${state.view==='export'?'active':''}">Übersicht und Download</button>`;
+  nav.innerHTML = h;
+  nav.querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>go(b.dataset.view)));
+}
+function renderNavDots(){
+  const nav=$("#nav");
+  DATA.cases.forEach(c=>{ const d=nav.querySelector(`button[data-view="${c.nr}"] .dot`); if(d) d.className="dot "+progress(state.cases[c.nr]); });
+  const d=nav.querySelector(`button[data-view="own"] .dot`); if(d) d.className="dot "+progress(state.own);
+}
+function go(view){ state.view = view; save(); render(); window.scrollTo({top:0,behavior:"smooth"}); }
+
+function render(){
+  renderNav();
+  const v = state.view;
+  if(v==="basics") return renderBasics();
+  if(v==="intro") return renderIntro();
+  if(v==="export") return renderExport();
+  if(v==="own") return renderCase(null);
+  const c = DATA.cases.find(x=>String(x.nr)===String(v));
+  if(c) return renderCase(c); else { state.view="basics"; renderBasics(); }
+}
+
+/* ---------- views ---------- */
+function defList(g){ return `<dl>${ORDER.filter(k=>DIMS[k].group===g).map(k=>`<dt>${DIMS[k].name}</dt><dd>${DIMS[k].desc}</dd>`).join("")}</dl>`; }
+function renderBasics(){
+  $("#main").innerHTML = `<section class="card">
+    <div class="kicker">Grundlagen</div>
+    <h2>Reibungslosigkeit und Schwung</h2>
+    <p>Unterrichtsfluss beschreibt nach Kounin (1976) einen Unterricht, der ohne sachlogische Brüche und ohne unnötige Unterbrechungen verläuft. Kounin unterscheidet zwei Seiten. Reibungslosigkeit fehlt, wenn die Lehrkraft sprunghaft zwischen Reizen und Themen wechselt. Schwung fehlt, wenn die Lehrkraft den Arbeitsprozess verzögert.</p>
+    <div class="defgrid">
+      <div class="defbox"><h3>Reibungslosigkeit</h3>${defList("R")}</div>
+      <div class="defbox"><h3>Schwung</h3>${defList("S")}
+        <p class="hint" style="margin-top:14px">Zu Kounins Beispielen gehören auch gelungene Situationen, in denen eine Lehrkraft einen möglichen Störreiz bemerkt und trotzdem beim Ziel bleibt.</p></div>
+    </div>
+  </section>
+  <section class="card">
+    <div class="kicker">Für die alternative Handlung</div>
+    <h2>Strukturierende Handlungen der Lehrkraft</h2>
+    <div class="handl">
+      <div><strong>Orientierungssicherheit</strong>Klare Ziele, transparente Erwartungen, angekündigte Wechsel, Strukturierungshilfen und Rituale</div>
+      <div><strong>Klarheit</strong>Akustisch, sprachlich, inhaltlich und fachlich klar formulieren</div>
+      <div><strong>Verständlichkeit</strong>Lautstärke, Sprechtempo, Pausen, Gestik und Mimik adressatengerecht einsetzen</div>
+      <div><strong>Unterschiedliche Arbeitstempi</strong>Differenzierung und vorbereitete Anschlussaufgaben verhindern Leerlauf</div>
+      <div><strong>Gesamtaktivität der Klasse</strong>Alle Lernenden gleichzeitig beschäftigt halten</div>
+      <div class="wide"><strong>Übergangsmanagement und Gesamtstrukturierung</strong>Kurze, vorbereitete Überleitungen zwischen den Phasen sowie eine Stundenstruktur, die bewusst macht, was noch kommt</div>
+    </div>
+    <div class="btnrow"><button class="btn" id="start">Zum Arbeitsauftrag</button></div>
+  </section>`;
+  $("#start").onclick = ()=>go("intro");
+}
+
+function renderIntro(){
+  $("#main").innerHTML = `<section class="card">
+    <div class="kicker">So arbeiten Sie</div>
+    <h2>Arbeitsauftrag</h2>
+    ${DATA.intro.map(p=>`<p>${esc(p)}</p>`).join("")}
+    <h3>Vorgehen bei jedem Fall</h3>
+    <p>Lesen Sie die Situation genau und wählen Sie die Dimension, die betroffen ist. Mehrfachauswahl ist möglich, wenn Sie zwei Dimensionen für tragfähig halten. Beschreiben Sie anschließend das beobachtbare Verhalten, begründen Sie Ihre Zuordnung und entwickeln Sie eine alternative Handlung, mit der der Fluss erhalten bliebe.</p>
+    <p>Vergleichen Sie erst danach mit der Musterlösung. Eine abweichende Zuordnung ist kein Fehler, solange Sie sie an den Merkmalen der Dimension begründen können.</p>
+    <h3>Eigener digitaler Fall</h3>
+    <p>Beschreiben Sie zum Schluss eine Situation mit digitalen Medien aus Ihrer Schulzeit, einem Praktikum oder einer Beobachtung, in der der Unterrichtsfluss gebrochen wurde oder gerade noch gelungen ist. Analysieren Sie sie mit demselben Raster. Gut ausgearbeitete eigene Fälle eignen sich als Vorlage für fallbasierte Klausurfragen in der Übungssitzung.</p>
+    <h3>Speichern und Herunterladen</h3>
+    <p>Ihre Eingaben werden automatisch in diesem Browser gespeichert. Unter Übersicht und Download können Sie Ihre Bearbeitung als PDF oder Word-Datei herunterladen sowie eine Sicherungsdatei speichern, mit der Sie an einem anderen Gerät weiterarbeiten.</p>
+    <div class="btnrow"><button class="btn" id="first">Mit Fall 1 beginnen</button></div>
+  </section>`;
+  $("#first").onclick = ()=>go(1);
+}
+
+function renderCase(c){
+  const own = !c;
+  const e = own ? state.own : state.cases[c.nr];
+  const idx = own ? DATA.cases.length : DATA.cases.findIndex(x=>x.nr===c.nr);
+  const main = $("#main");
+  const good = !own && c.dims.includes("GL");
+
+  const sitHTML = own
+    ? `<label class="field">Titel Ihres Falls<input id="ownTitle" type="text" style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:8px;font:inherit;margin-top:4px" value="${esc(e.title||"")}" placeholder="z. B. Quiz-App im Vertretungsunterricht"></label>
+       <label class="field">Situation<span>Beschreiben Sie die Situation mit digitalen Medien möglichst konkret und ohne Namen realer Personen. Nennen Sie die Dimension nicht im Text.</span><textarea id="ownSit" style="min-height:150px">${esc(e.situation||"")}</textarea></label>`
+    : `<div class="situation">${c.situation.map(p=>`<p>${esc(p)}</p>`).join("")}</div>`;
+
+  main.innerHTML = `<section class="card">
+      <div class="kicker">${own?"Eigene Fallarbeit":"Fall "+c.nr+" von "+DATA.cases.length}</div>
+      <h2>${own?"Eigener digitaler Fall":esc(c.title)}${own?"":`<span class="tag">${esc(c.tag)}</span>`}</h2>
+      ${sitHTML}
+    </section>
+    <section class="card">
+      <h3 style="margin-top:0">1 · Dimension wählen</h3>
+      <p class="hint">Tippen Sie die Dimension an, die betroffen ist. Ein erneutes Antippen hebt die Auswahl auf.</p>
+      <div id="dimsel"></div>
+      <h3>2 · Analyse</h3>
+      ${FIELDS.map(f=>`<label class="field">${f.label}<span>${good&&f.helpGood?f.helpGood:f.help}</span><textarea data-key="${f.key}">${esc(e[f.key])}</textarea></label>`).join("")}
+      <div class="btnrow">
+        ${own?"":`<button class="btn ${e.revealed?'ghost':''}" id="reveal">${e.revealed?"Musterlösung ausblenden":"Mit Musterlösung vergleichen"}</button>`}
+        ${idx>0?`<button class="btn ghost" id="prev">Vorheriger Fall</button>`:""}
+        <button class="btn ghost" id="next">${own?"Zur Übersicht":(idx<DATA.cases.length-1?"Nächster Fall":"Eigener digitaler Fall")}</button>
+      </div>
+      <div id="revealBox"></div>
+      <div class="status" id="status"></div>
+    </section>`;
+
+  const drawDims = ()=>{
+    const cmp = !own && e.revealed;
+    let h="";
+    GROUPS.forEach(([g,label])=>{
+      h += `<div class="dimgroup"><div class="gl">${label}</div><div class="dimbtns">`;
+      ORDER.filter(k=>DIMS[k].group===g).forEach(k=>{
+        const sel=e.dims.includes(k);
+        let cls="";
+        if(cmp){
+          const exp=c.dims.includes(k), alt=(c.alsoOk||[]).includes(k);
+          if(sel&&exp) cls="cmp-ok"; else if(sel&&alt) cls="cmp-alt"; else if(sel) cls="cmp-extra"; else if(exp) cls="cmp-miss";
+        }
+        const mark = cmp ? (cls==="cmp-ok"?" ✓":cls==="cmp-alt"?" ✓":cls==="cmp-extra"?" ?":cls==="cmp-miss"?" +":"") : "";
+        h += `<button class="dim ${cls}" data-k="${k}" aria-pressed="${sel}" title="${esc(DIMS[k].desc)}">${DIMS[k].name}${mark}</button>`;
+      });
+      h += `</div></div>`;
+    });
+    $("#dimsel").innerHTML = h;
+    $("#dimsel").querySelectorAll("button.dim").forEach(b=>b.onclick=()=>{
+      const k=b.dataset.k, i=e.dims.indexOf(k);
+      if(i>=0) e.dims.splice(i,1); else e.dims.push(k);
+      e.dims.sort((a,b)=>ORDER.indexOf(a)-ORDER.indexOf(b));
+      save(); drawDims(); drawReveal(); renderNavDots();
+      const nb=$(`#dimsel button[data-k="${k}"]`); if(nb) nb.focus();
+    });
+  };
+  const drawReveal = ()=>{
+    const box = $("#revealBox");
+    if(own || !e.revealed){ box.innerHTML=""; return; }
+    const exp=c.dims, alt=c.alsoOk||[];
+    const ok=e.dims.filter(x=>exp.includes(x)), okAlt=e.dims.filter(x=>alt.includes(x));
+    const miss=exp.filter(x=>!e.dims.includes(x)), extra=e.dims.filter(x=>!exp.includes(x)&&!alt.includes(x));
+    const chip=(arr,cls)=>arr.length?arr.map(x=>`<span class="chip ${cls}">${DIMS[x].name}</span>`).join(""):`<span class="legend">keine</span>`;
+    box.innerHTML = `<div class="reveal">
+      <h3>Vergleich Ihrer Auswahl</h3>
+      <p class="legend">Bei der Auswahl oben steht ✓ für Übereinstimmung, + für die Dimension der Musterlösung, die Sie nicht gewählt haben, und ? für eine Dimension, die nur Sie gewählt haben.</p>
+      <div><strong>Übereinstimmung</strong><div class="chips">${chip(ok,"ok")}${okAlt.length?chip(okAlt,"alt"):""}</div>
+      ${okAlt.length?`<p class="legend">Hellgrün markierte Dimensionen sind als Zweitzuordnung gut vertretbar, wenn Sie sie begründen.</p>`:""}</div>
+      <div><strong>Zusätzlich in der Musterlösung</strong><div class="chips">${chip(miss,"miss")}</div></div>
+      <div><strong>Nur bei Ihnen gewählt</strong><div class="chips">${chip(extra,"extra")}</div>
+      ${extra.length?`<p class="legend">Prüfen Sie Ihre Begründung an den Merkmalen der Dimension. Eine gut begründete abweichende Zuordnung kann ebenso tragfähig sein.</p>`:""}</div>
+      <h3>Musterlösung</h3>
+      ${c.analysis.map(p=>`<p>${esc(p)}</p>`).join("")}
+    </div>`;
+  };
+  drawDims(); drawReveal(); growAll();
+
+  main.querySelectorAll("textarea[data-key]").forEach(t=>{
+    t.addEventListener("input", ()=>{ e[t.dataset.key]=t.value; save(); renderNavDots(); });
+  });
+  if(own){
+    $("#ownTitle").addEventListener("input", ev=>{ e.title=ev.target.value; save(); });
+    $("#ownSit").addEventListener("input", ev=>{ e.situation=ev.target.value; save(); renderNavDots(); });
+  } else {
+    $("#reveal").onclick = ()=>{
+      if(!e.revealed){
+        const empty = !e.dims.length && !FIELDS.some(f=>e[f.key].trim());
+        if(empty && !confirm("Sie haben noch nichts gewählt oder eingetragen. Möchten Sie die Musterlösung trotzdem schon ansehen?")) return;
+      }
+      e.revealed = !e.revealed; save();
+      const btn=$("#reveal"); btn.textContent = e.revealed?"Musterlösung ausblenden":"Mit Musterlösung vergleichen"; btn.classList.toggle("ghost", e.revealed);
+      drawDims(); drawReveal();
+      if(e.revealed) $("#revealBox").scrollIntoView({behavior:"smooth",block:"start"});
+    };
+  }
+  const prev=$("#prev"); if(prev) prev.onclick=()=>go(own?DATA.cases[DATA.cases.length-1].nr:DATA.cases[idx-1].nr);
+  $("#next").onclick=()=>go(own?"export":(idx<DATA.cases.length-1?DATA.cases[idx+1].nr:"own"));
+}
+
+function renderExport(){
+  const rows = DATA.cases.map(c=>{
+    const e=state.cases[c.nr];
+    return `<tr><td>${c.nr}</td><td>${esc(c.title)}</td><td>${e.dims.length?esc(dimLine(e.dims)):"<span class='legend'>keine</span>"}</td><td>${e.revealed?"angesehen":"<span class='legend'>noch nicht</span>"}</td></tr>`;
+  }).join("");
+  $("#main").innerHTML = `<section class="card">
+    <div class="kicker">Abschluss</div>
+    <h2>Übersicht und Download</h2>
+    <table class="over"><thead><tr><th>Fall</th><th>Titel</th><th>Ihre Zuordnung</th><th>Musterlösung</th></tr></thead><tbody>${rows}
+      <tr><td>+</td><td>${esc(state.own.title||"Eigener digitaler Fall")}</td><td>${state.own.dims.length?esc(dimLine(state.own.dims)):"<span class='legend'>keine</span>"}</td><td><span class='legend'>entfällt</span></td></tr>
+    </tbody></table>
+    <h3>Bearbeitung herunterladen</h3>
+    <p>PDF und Word-Datei enthalten alle Fälle, Ihre Zuordnungen und Ihre Texte in voller Länge. Auf Wunsch werden die Musterlösungen der Fälle angefügt, die Sie bereits verglichen haben.</p>
+    <label style="display:flex;gap:10px;align-items:center;font-size:.95rem;min-height:44px"><input type="checkbox" id="incl" style="width:22px;height:22px"> Musterlösungen der verglichenen Fälle aufnehmen</label>
+    <div class="btnrow">
+      <button class="btn" id="dlPdf">Als PDF herunterladen</button>
+      <button class="btn ghost" id="dlWord">Als Word-Datei herunterladen</button>
+      <button class="btn ghost" id="dlBackup">Sicherungsdatei speichern</button>
+      <button class="btn ghost" id="ldBackup">Sicherungsdatei laden</button>
+      <input type="file" id="fileIn" accept=".json,application/json" hidden>
+    </div>
+    <p class="hint">Mit der Sicherungsdatei können Sie Ihre Bearbeitung an einem anderen Gerät oder in einem anderen Browser fortsetzen.</p>
+    <h3>Neu beginnen</h3>
+    <div class="btnrow" style="margin-top:4px"><button class="btn danger" id="reset">Alle Eingaben löschen</button></div>
+    <div class="status" id="status"></div>
+  </section>`;
+  $("#dlWord").onclick = ()=>downloadWord($("#incl").checked);
+  $("#dlPdf").onclick = ()=>downloadPdf($("#incl").checked);
+  $("#dlBackup").onclick = ()=>{
+    const blob = new Blob([JSON.stringify(Object.assign({}, state, {app:"unterrichtsfluss-uebung", version:1}), null, 2)], {type:"application/json"});
+    saveBlob(blob, fileBase()+"_Sicherung.json"); toast("Sicherungsdatei gespeichert");
+  };
+  $("#ldBackup").onclick = ()=>$("#fileIn").click();
+  $("#fileIn").onchange = ev=>{
+    const f = ev.target.files[0]; if(!f) return;
+    const r = new FileReader();
+    r.onload = ()=>{
+      try{ const obj=JSON.parse(r.result); if(!obj.cases || obj.app!=="unterrichtsfluss-uebung") throw 0; mergeState(obj); state.view="export"; save(); $("#name").value=state.name; render(); toast("Sicherung geladen"); }
+      catch(e){ alert("Die Datei konnte nicht gelesen werden. Bitte wählen Sie eine Sicherungsdatei dieser Übung aus."); }
+    };
+    r.readAsText(f);
+  };
+  $("#reset").onclick = ()=>{
+    if(!confirm("Wirklich alle Eingaben löschen? Dies lässt sich nicht rückgängig machen.")) return;
+    state = freshState(); save(); $("#name").value=""; render(); toast("Alle Eingaben gelöscht");
+  };
+}
+
+/* ---------- download ---------- */
+const TITLE = "Fallanalyse Unterrichtsfluss";
+function fileBase(){
+  const n = (state.name||"").trim().replace(/[^\p{L}\p{N}]+/gu,"_").replace(/^_|_$/g,"");
+  return "Fallanalyse_Unterrichtsfluss" + (n?"_"+n:"");
+}
+function saveBlob(blob, name){
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=name;
+  document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href); a.remove();},500);
+}
+function today(){ return new Date().toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit",year:"numeric"}); }
+function collectSections(includeModel){
+  const out = [];
+  DATA.cases.forEach(c=>{
+    const e=state.cases[c.nr];
+    out.push({title:`Fall ${c.nr} · ${c.title}`, situation:c.situation, dims:e.dims,
+      fields:FIELDS.map(f=>({label:f.label, text:e[f.key]})),
+      model: includeModel && e.revealed ? {dims:c.dims, alsoOk:c.alsoOk||[], analysis:c.analysis} : null});
+  });
+  const o=state.own;
+  if(o.situation.trim() || o.dims.length || FIELDS.some(f=>o[f.key].trim())){
+    out.push({title:"Eigener digitaler Fall"+(o.title.trim()?" · "+o.title.trim():""), situation:o.situation.split(/\n\s*\n/).filter(Boolean),
+      dims:o.dims, fields:FIELDS.map(f=>({label:f.label, text:o[f.key]})), model:null});
+  }
+  return out;
+}
+function modelLine(m){ return "Musterlösung "+dimLine(m.dims)+(m.alsoOk.length?" (vertretbar auch "+dimLine(m.alsoOk)+")":""); }
+
+let docxLoading=null;
+function loadDocx(){
+  if(window.docx) return Promise.resolve(window.docx);
+  if(docxLoading) return docxLoading;
+  docxLoading = new Promise((res,rej)=>{
+    const s=document.createElement("script");
+    s.src="https://cdn.jsdelivr.net/npm/docx@9.8.1/dist/index.iife.js";
+    s.onload=()=>window.docx?res(window.docx):rej(); s.onerror=rej;
+    document.head.appendChild(s);
+    setTimeout(()=>rej(new Error("timeout")),12000);
+  }).catch(e=>{ docxLoading=null; throw e; });
+  return docxLoading;
+}
+async function downloadWord(includeModel){
+  const secs = collectSections(includeModel);
+  try{
+    const D = await loadDocx();
+    const {Document,Packer,Paragraph,TextRun,HeadingLevel} = D;
+    const F="Calibri";
+    const para=(t,o={})=>String(t||"").split(/\n/).map(line=>new Paragraph({spacing:{after:120,line:300}, children:[new TextRun(Object.assign({text:line,font:F,size:22},o))]}));
+    const head=(t,l)=>new Paragraph({heading:l, keepNext:true, spacing:{before:240,after:100}, children:[new TextRun({text:t,font:F})]});
+    const ch=[];
+    ch.push(new Paragraph({heading:HeadingLevel.TITLE, children:[new TextRun({text:TITLE,font:F})]}));
+    ch.push(...para(`Seminar Klassenführung · ${state.name.trim()||"ohne Namen"} · ${today()}`,{color:"555555",size:20}));
+    secs.forEach(s=>{
+      ch.push(head(s.title, HeadingLevel.HEADING_1));
+      ch.push(head("Situation", HeadingLevel.HEADING_2));
+      s.situation.forEach(p=>ch.push(...para(p,{color:"444444"})));
+      ch.push(head("Gewählte Dimension", HeadingLevel.HEADING_2));
+      ch.push(...para(dimLine(s.dims)));
+      s.fields.forEach(f=>{ ch.push(head(f.label, HeadingLevel.HEADING_2)); ch.push(...para(f.text.trim()||"(nicht bearbeitet)", f.text.trim()?{}:{italics:true,color:"888888"})); });
+      if(s.model){ ch.push(head("Musterlösung zum Vergleich", HeadingLevel.HEADING_2)); ch.push(...para(modelLine(s.model),{bold:true})); s.model.analysis.forEach(p=>ch.push(...para(p,{color:"444444"}))); }
+    });
+    const doc = new Document({
+      styles:{paragraphStyles:[
+        {id:"Heading1",name:"Heading 1",basedOn:"Normal",next:"Normal",quickFormat:true,run:{size:30,bold:true,color:"00883A",font:F},paragraph:{outlineLevel:0}},
+        {id:"Heading2",name:"Heading 2",basedOn:"Normal",next:"Normal",quickFormat:true,run:{size:23,bold:true,color:"333333",font:F},paragraph:{outlineLevel:1}},
+        {id:"Title",name:"Title",basedOn:"Normal",next:"Normal",run:{size:40,bold:true,color:"00883A",font:F}}
+      ]},
+      sections:[{properties:{page:{margin:{top:1300,bottom:1300,left:1440,right:1440}}}, children:ch}]
+    });
+    const blob = await Packer.toBlob(doc);
+    saveBlob(blob, fileBase()+".docx"); toast("Word-Datei erstellt");
+  }catch(err){
+    let h = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"><title>Fallanalyse</title>
+      <style>body{font-family:Calibri,Arial;font-size:11pt}h1{color:#00883A}h2{color:#00883A;margin-top:18pt}h3{font-size:12pt}</style></head><body>`;
+    h += `<h1>${TITLE}</h1><p>Seminar Klassenführung · ${esc(state.name.trim()||"ohne Namen")} · ${today()}</p>`;
+    secs.forEach(s=>{
+      h += `<h2>${esc(s.title)}</h2><h3>Situation</h3>${s.situation.map(p=>`<p>${esc(p)}</p>`).join("")}<h3>Gewählte Dimension</h3><p>${esc(dimLine(s.dims))}</p>`;
+      s.fields.forEach(f=>{ h+=`<h3>${esc(f.label)}</h3><p>${esc(f.text.trim()||"(nicht bearbeitet)").replace(/\n/g,"<br>")}</p>`; });
+      if(s.model) h+=`<h3>Musterlösung zum Vergleich</h3><p><b>${esc(modelLine(s.model))}</b></p>${s.model.analysis.map(p=>`<p>${esc(p)}</p>`).join("")}`;
+    });
+    h += `</body></html>`;
+    saveBlob(new Blob(["﻿"+h],{type:"application/msword"}), fileBase()+".doc");
+    toast("Word-Datei im Kompatibilitätsformat erstellt");
+  }
+}
+
+let pdfLoading=null;
+function loadPdfLib(){
+  if(window.jspdf && window.jspdf.jsPDF) return Promise.resolve(window.jspdf.jsPDF);
+  if(pdfLoading) return pdfLoading;
+  pdfLoading = new Promise((res,rej)=>{
+    const s=document.createElement("script");
+    s.src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js";
+    s.onload=()=>(window.jspdf&&window.jspdf.jsPDF)?res(window.jspdf.jsPDF):rej(); s.onerror=rej;
+    document.head.appendChild(s);
+    setTimeout(()=>rej(new Error("timeout")),12000);
+  }).catch(e=>{ pdfLoading=null; throw e; });
+  return pdfLoading;
+}
+const CP1252 = "€‚ƒ„…†‡ˆ‰Š‹ŒŽ‘’“”•–—˜™š›œžŸ";
+function pdfSafe(s){
+  return String(s||"").replace(/\r/g,"").replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]️?/g,"").replace(/️/g,"").replace(/\t/g,"    ").replace(/[^\n\x20-\x7E\xA0-\xFF]/g, ch=>CP1252.includes(ch)?ch:"?");
+}
+async function downloadPdf(includeModel){
+  const secs = collectSections(includeModel);
+  let JsPDF;
+  try{ JsPDF = await loadPdfLib(); } catch(e){ printFallback(secs); return; }
+  const doc = new JsPDF({unit:"mm", format:"a4"});
+  const M=20, W=210-2*M, BOTTOM=297-20;
+  let y=M;
+  const GREEN=[0,136,58], INK=[31,36,33], GREY=[85,85,85], LIGHT=[136,136,136];
+  const lh = size => size*0.3528*1.38;
+  function ensure(h){ if(y+h>BOTTOM){ doc.addPage(); y=M; } }
+  function write(str, o={}){
+    const size=o.size||10.5, style=o.style||"normal";
+    doc.setFont("helvetica", style); doc.setFontSize(size); doc.setTextColor(...(o.color||INK));
+    const lines = doc.splitTextToSize(pdfSafe(str), o.width||W);
+    lines.forEach(line=>{ ensure(lh(size)); doc.text(line, o.x||M, y+lh(size)*0.78); y+=lh(size); });
+    y += (o.after==null?2:o.after);
+  }
+  function heading(t, level){
+    const size = level===1?15:11.5;
+    ensure(lh(size)+(level===1?14:10));
+    y += level===1?4:2;
+    write(t,{size, style:"bold", color: level===1?GREEN:INK, after:1});
+  }
+  function block(label, text){ heading(label,2); const t=(text||"").trim(); if(t) write(t); else write("(nicht bearbeitet)",{style:"italic",color:LIGHT}); }
+  write(TITLE,{size:20,style:"bold",color:GREEN,after:1});
+  write(`Seminar Klassenführung · ${state.name.trim()||"ohne Namen"} · ${today()}`,{size:10,color:GREY,after:4});
+  secs.forEach((s,i)=>{
+    if(i>0){ doc.addPage(); y=M; }
+    heading(s.title,1);
+    heading("Situation",2);
+    if(s.situation.length) s.situation.forEach(p=>write(p,{color:GREY})); else write("(keine Situation beschrieben)",{style:"italic",color:LIGHT});
+    heading("Gewählte Dimension",2);
+    if(s.dims.length) write(dimLine(s.dims)); else write("keine Auswahl",{style:"italic",color:LIGHT});
+    s.fields.forEach(f=>block(f.label, f.text));
+    if(s.model){ heading("Musterlösung zum Vergleich",2); write(modelLine(s.model),{style:"bold",size:10}); s.model.analysis.forEach(p=>write(p,{color:GREY})); }
+  });
+  const n=doc.getNumberOfPages();
+  for(let i=1;i<=n;i++){
+    doc.setPage(i); doc.setFont("helvetica","normal"); doc.setFontSize(8.5); doc.setTextColor(...LIGHT);
+    doc.text(pdfSafe(`${TITLE} · ${state.name.trim()||"ohne Namen"}`), M, 297-10);
+    doc.text(`Seite ${i} von ${n}`, 210-M, 297-10, {align:"right"});
+  }
+  saveBlob(doc.output("blob"), fileBase()+".pdf");
+  toast("PDF erstellt");
+}
+function printFallback(secs){
+  const box = document.getElementById("printArea");
+  let h = `<h1>${TITLE}</h1><p>Seminar Klassenführung · ${esc(state.name.trim()||"ohne Namen")} · ${today()}</p>`;
+  const t = s => `<p class="txt">${esc((s||"").trim()||"(nicht bearbeitet)")}</p>`;
+  secs.forEach(s=>{
+    h += `<section><h2>${esc(s.title)}</h2><h3>Situation</h3>${s.situation.map(p=>`<p class="txt sit">${esc(p)}</p>`).join("")}`;
+    h += `<h3>Gewählte Dimension</h3><p class="txt">${esc(dimLine(s.dims))}</p>`;
+    s.fields.forEach(f=>{ h += `<h3>${esc(f.label)}</h3>${t(f.text)}`; });
+    if(s.model) h += `<h3>Musterlösung zum Vergleich</h3><p class="txt"><b>${esc(modelLine(s.model))}</b></p>${s.model.analysis.map(p=>`<p class="txt sit">${esc(p)}</p>`).join("")}`;
+    h += `</section>`;
+  });
+  box.innerHTML = h;
+  alert("Ohne Internetverbindung öffnet sich der Druckdialog. Wählen Sie dort als Ziel „Als PDF speichern“.");
+  window.print();
+}
+
+/* ---------- init ---------- */
+const nameIn = $("#name");
+nameIn.value = state.name;
+nameIn.addEventListener("input", ()=>{ state.name = nameIn.value; save(); });
+render();
+</script>
+</body>
+</html>
