@@ -101,17 +101,6 @@ button.dim.cmp-miss{background:var(--blue-soft);border-color:#b8c9e6;color:var(-
 button.dim.cmp-extra{background:var(--warn-soft);border-color:#f0cf9a;color:var(--warn)}
 .chip.alt{background:#f3faf5;border-color:#bfe0cb;color:var(--green-dark)}
 .tag{display:inline-block;font-size:.78rem;padding:2px 9px;border-radius:999px;background:var(--bg);border:1px solid var(--line);color:var(--muted);margin-left:6px;vertical-align:middle}
-.defgrid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-.defbox{background:var(--bg);border-radius:8px;padding:12px 16px}
-.defbox h3{margin:0 0 6px;color:var(--green-dark)}
-.defbox dl{margin:0}
-.defbox dt{font-weight:600;margin-top:8px}
-.defbox dd{margin:0;font-size:.93rem}
-.handl{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-.handl div{background:var(--bg);border-radius:8px;padding:10px 12px;font-size:.9rem}
-.handl strong{display:block;color:var(--green-dark)}
-.handl .wide{grid-column:1/-1;background:var(--green-soft)}
-@media (max-width:820px){ .defgrid{grid-template-columns:1fr} .handl{grid-template-columns:1fr} }
 </style>
 </head>
 <body>
@@ -159,7 +148,7 @@ const FIELDS = [
 const STORE_KEY = "unterrichtsfluss-uebung-v1";
 function emptyEntry(){ return {dims:[], obs:"", assign:"", alt:"", revealed:false}; }
 function freshState(){
-  const s = {name:"", cases:{}, own:Object.assign(emptyEntry(), {title:"", situation:""}), view:"basics"};
+  const s = {name:"", cases:{}, own:Object.assign(emptyEntry(), {title:"", situation:""}), view:"intro"};
   DATA.cases.forEach(c => s.cases[c.nr] = emptyEntry());
   return s;
 }
@@ -202,7 +191,7 @@ const dimLine = arr => arr.length ? arr.map(x=>DIMS[x].name).join(", ") : "keine
 /* ---------- navigation ---------- */
 function renderNav(){
   const nav = $("#nav");
-  let h = [["basics","Grundlagen"],["intro","Arbeitsauftrag"]].map(([v,t])=>`<button data-view="${v}" class="${state.view===v?'active':''}">${t}</button>`).join("");
+  let h = [["intro","Arbeitsauftrag"]].map(([v,t])=>`<button data-view="${v}" class="${state.view===v?'active':''}">${t}</button>`).join("");
   h += "<hr>";
   DATA.cases.forEach(c=>{
     h += `<button data-view="${c.nr}" class="${String(state.view)===String(c.nr)?'active':''}"><span class="dot ${progress(state.cases[c.nr])}"></span>Fall ${c.nr} · ${esc(c.title)}</button>`;
@@ -223,43 +212,14 @@ function go(view){ state.view = view; save(); render(); window.scrollTo({top:0,b
 function render(){
   renderNav();
   const v = state.view;
-  if(v==="basics") return renderBasics();
   if(v==="intro") return renderIntro();
   if(v==="export") return renderExport();
   if(v==="own") return renderCase(null);
   const c = DATA.cases.find(x=>String(x.nr)===String(v));
-  if(c) return renderCase(c); else { state.view="basics"; renderBasics(); }
+  if(c) return renderCase(c); else { state.view="intro"; renderIntro(); }
 }
 
 /* ---------- views ---------- */
-function defList(g){ return `<dl>${ORDER.filter(k=>DIMS[k].group===g).map(k=>`<dt>${DIMS[k].name}</dt><dd>${DIMS[k].desc}</dd>`).join("")}</dl>`; }
-function renderBasics(){
-  $("#main").innerHTML = `<section class="card">
-    <div class="kicker">Grundlagen</div>
-    <h2>Reibungslosigkeit und Schwung</h2>
-    <p>Unterrichtsfluss beschreibt nach Kounin (1976) einen Unterricht, der ohne sachlogische Brüche und ohne unnötige Unterbrechungen verläuft. Kounin unterscheidet zwei Seiten. Reibungslosigkeit fehlt, wenn die Lehrkraft sprunghaft zwischen Reizen und Themen wechselt. Schwung fehlt, wenn die Lehrkraft den Arbeitsprozess verzögert.</p>
-    <div class="defgrid">
-      <div class="defbox"><h3>Reibungslosigkeit</h3>${defList("R")}</div>
-      <div class="defbox"><h3>Schwung</h3>${defList("S")}
-        <p class="hint" style="margin-top:14px">Zu Kounins Beispielen gehören auch gelungene Situationen, in denen eine Lehrkraft einen möglichen Störreiz bemerkt und trotzdem beim Ziel bleibt.</p></div>
-    </div>
-  </section>
-  <section class="card">
-    <div class="kicker">Für die alternative Handlung</div>
-    <h2>Strukturierende Handlungen der Lehrkraft</h2>
-    <div class="handl">
-      <div><strong>Orientierungssicherheit</strong>Klare Ziele, transparente Erwartungen, angekündigte Wechsel, Strukturierungshilfen und Rituale</div>
-      <div><strong>Klarheit</strong>Akustisch, sprachlich, inhaltlich und fachlich klar formulieren</div>
-      <div><strong>Verständlichkeit</strong>Lautstärke, Sprechtempo, Pausen, Gestik und Mimik adressatengerecht einsetzen</div>
-      <div><strong>Unterschiedliche Arbeitstempi</strong>Differenzierung und vorbereitete Anschlussaufgaben verhindern Leerlauf</div>
-      <div><strong>Gesamtaktivität der Klasse</strong>Alle Lernenden gleichzeitig beschäftigt halten</div>
-      <div class="wide"><strong>Übergangsmanagement und Gesamtstrukturierung</strong>Kurze, vorbereitete Überleitungen zwischen den Phasen sowie eine Stundenstruktur, die bewusst macht, was noch kommt</div>
-    </div>
-    <div class="btnrow"><button class="btn" id="start">Zum Arbeitsauftrag</button></div>
-  </section>`;
-  $("#start").onclick = ()=>go("intro");
-}
-
 function renderIntro(){
   $("#main").innerHTML = `<section class="card">
     <div class="kicker">So arbeiten Sie</div>
@@ -269,7 +229,7 @@ function renderIntro(){
     <p>Lesen Sie die Situation genau und wählen Sie die Dimension, die betroffen ist. Mehrfachauswahl ist möglich, wenn Sie zwei Dimensionen für tragfähig halten. Beschreiben Sie anschließend das beobachtbare Verhalten, begründen Sie Ihre Zuordnung und entwickeln Sie eine alternative Handlung, mit der der Fluss erhalten bliebe.</p>
     <p>Vergleichen Sie erst danach mit der Musterlösung. Eine abweichende Zuordnung ist kein Fehler, solange Sie sie an den Merkmalen der Dimension begründen können.</p>
     <h3>Eigener digitaler Fall</h3>
-    <p>Beschreiben Sie zum Schluss eine Situation mit digitalen Medien aus Ihrer Schulzeit, einem Praktikum oder einer Beobachtung, in der der Unterrichtsfluss gebrochen wurde oder gerade noch gelungen ist. Analysieren Sie sie mit demselben Raster. Gut ausgearbeitete eigene Fälle eignen sich als Vorlage für fallbasierte Klausurfragen in der Übungssitzung.</p>
+    <p>Beschreiben Sie zum Schluss eine Situation mit digitalen Medien aus Ihrer Schulzeit, einem Praktikum oder einer Beobachtung, in der der Unterrichtsfluss gebrochen wurde oder gerade noch gelungen ist. Analysieren Sie sie mit demselben Raster.</p>
     <h3>Speichern und Herunterladen</h3>
     <p>Ihre Eingaben werden automatisch in diesem Browser gespeichert. Unter Übersicht und Download können Sie Ihre Bearbeitung als PDF oder Word-Datei herunterladen sowie eine Sicherungsdatei speichern, mit der Sie an einem anderen Gerät weiterarbeiten.</p>
     <div class="btnrow"><button class="btn" id="first">Mit Fall 1 beginnen</button></div>
